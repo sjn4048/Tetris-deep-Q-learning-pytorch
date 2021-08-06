@@ -34,6 +34,7 @@ def get_args():
                         help="Number of epoches between testing phases")
     parser.add_argument("--log_path", type=str, default="tensorboard")
     parser.add_argument("--saved_path", type=str, default="trained_models")
+    parser.add_argument("--render", type=bool, default=False)
 
     args = parser.parse_args()
     return args
@@ -83,7 +84,7 @@ def train(opt):
         next_state = next_states[index, :]
         action = next_actions[index]
 
-        reward, done = env.step(action, render=True)
+        reward, done = env.step(action, render=opt.render)
 
         if torch.cuda.is_available():
             next_state = next_state.cuda()
@@ -127,9 +128,10 @@ def train(opt):
         loss.backward()
         optimizer.step()
 
-        print("Epoch: {}/{}, Action: {}, Score: {}, Tetrominoes {}, Cleared lines: {}".format(
+        print("Epoch: {}/{}, Loss: {}, Action: {}, Score: {}, Tetrominoes {}, Cleared lines: {}".format(
             epoch,
             opt.num_epochs,
+            loss,
             action,
             final_score,
             final_tetrominoes,
@@ -137,6 +139,7 @@ def train(opt):
         writer.add_scalar('Train/Score', final_score, epoch - 1)
         writer.add_scalar('Train/Tetrominoes', final_tetrominoes, epoch - 1)
         writer.add_scalar('Train/Cleared lines', final_cleared_lines, epoch - 1)
+        writer.add_scalar('Train/Loss', loss, epoch - 1)
 
         if epoch > 0 and epoch % opt.save_interval == 0:
             torch.save(model, "{}/tetris_{}".format(opt.saved_path, epoch))
